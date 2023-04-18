@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["referentialIntegrity"]
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String?       @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  customerMeta  CustomerMeta?
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum UserGroup {
+  AGENT
+  SUPPORT
+  PROVIDER
+  ADMIN
+}
+
+model House {
+  id             String        @id @default(cuid())
+  createdAt      DateTime?     @default(now())
+  customer       CustomerMeta? @relation(fields: [customerMetaId], references: [id])
+  customerMetaId String?
+  stAddress      String
+  city           String
+  state          String
+  sqft           Int
+  zipCode        Int
+  houseStatus    HouseStatus
+  lat            Float?
+  lng            Float?
+  serviceType    ServiceType
+  configType     ConfigType
+  requestedTimes String?
+  region RegionCode
+
+  @@index([customerMetaId, houseStatus])
+}
+
+enum RegionCode {
+  NLA
+  SLA
+  OC
+  none
+}
+
+enum ConfigType {
+  config_1
+  config_2
+  none
+}
+
+enum ServiceType {
+  type_1
+  type_2
+  none
+}
+
+enum HouseStatus {
+  QUOTE
+  ACTIVE
+  COMPLETED
+}
+
+enum Status {
+  QUOTE
+  SCHEDULED
+  ERROR
+  ACTIVE
+  COMPLETED
+}
+
+model CustomerMeta {
+  id           String    @id @default(cuid())
+  createdAt    DateTime? @default(now())
+  user         User?     @relation(fields: [userId], references: [id])
+  userId       String?   @unique
+  name         String
+  phone        String?
+  email        String?   @unique
+  allowsEmail  Boolean   @default(false)
+  allowsText   Boolean   @default(false)
+  houses       House[]
+  crmContactId String?
+
+  @@index([userId])
+}
